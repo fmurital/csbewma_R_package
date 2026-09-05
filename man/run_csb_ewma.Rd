@@ -51,3 +51,6 @@ var_cache <- precompute_variance(0.175, max_t = 200)
 result <- run_csb_ewma(bin_matrix, lambda = 0.175, L = 1.375, var_cache)
 print(paste("Signal at time:", result$signal_time))
 }
+\seealso{
+\code{\link[=csb_ewma]{csb_ewma()}} for the higher-level convenience wrapper that dichotomizes continuous data, precomputes variance, calls this function, and performs post-hoc identification automatically.
+}

@@ -48,3 +48,6 @@ print(result)
 plot(result)
 }
 }
+\seealso{
+\code{\link[=run_csb_ewma]{run_csb_ewma()}} for the lower-level engine this function calls, useful directly when a variance cache should be precomputed once and reused across many chart runs (for example, in simulation studies).
+}

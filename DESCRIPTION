@@ -1,6 +1,6 @@
 Package: csbewma
 Title: Cumulative Standardized Binomial EWMA for Multiple Stream Processes
-Version: 1.0.1
+Version: 1.1.0
 Authors@R: c(
     person("Faruk", "Muritala", email = "fmurital@students.kennesaw.edu", role = c("aut", "cre")),
     person("Austin", "Brown", role = "aut"),
@@ -11,6 +11,8 @@ Author: Faruk Muritala [aut, cre], Austin Brown [aut], Dhrubajyoti Ghosh [aut], 
 Maintainer: Faruk Muritala <fmurital@students.kennesaw.edu>
 Description: Implements the Cumulative Standardized Binomial Exponentially Weighted Moving Average (CSB-EWMA) control chart for monitoring multiple independent streams with binomial outcomes. Provides exact variance calculations, adaptive control limits, post-hoc identification with multiple testing corrections (Bonferroni, Holm, Benjamini-Hochberg), and visualization tools. The method is described in Muritala et al. (2026) <doi:10.48550/arXiv.2601.09968>.
 License: MIT + file LICENSE
+URL: https://github.com/fmurital/csbewma_R_package
+BugReports: https://github.com/fmurital/csbewma_R_package/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends: R (>= 3.5)

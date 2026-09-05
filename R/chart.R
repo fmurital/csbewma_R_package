@@ -27,6 +27,7 @@
 #' @param max_time Maximum time points to monitor (default = NULL uses all)
 #' @param p0 In-control proportion (default = 0.5)
 #' @return A list of class "csb_ewma" containing chart results
+#' @seealso [csb_ewma()] for the higher-level convenience wrapper that dichotomizes continuous data, precomputes variance, calls this function, and performs post-hoc identification automatically.
 #' @export
 #'
 #' @examples
@@ -201,6 +202,7 @@ run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
 #' @param posthoc_method Method for post-hoc identification (default = "BH")
 #' @param alpha Significance level for post-hoc (default = 0.05)
 #' @return A list of class "csb_ewma" containing chart results and flagged streams
+#' @seealso [run_csb_ewma()] for the lower-level engine this function calls, useful directly when a variance cache should be precomputed once and reused across many chart runs (for example, in simulation studies).
 #' @export
 #'
 #' @examples

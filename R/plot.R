@@ -83,7 +83,7 @@ plot.csb_ewma <- function(x, title = "CSB-EWMA Control Chart",
                         color = "#D62828",
                         size = 3.5,
                         fontface = "bold",
-                        hjust = 0)
+                        hjust = 1)
   }
   
   # Display the plot
@@ -168,7 +168,7 @@ plot_csb_ewma_direct <- function(result, title = "CSB-EWMA Control Chart",
                         color = "#D62828",
                         size = 3.5,
                         fontface = "bold",
-                        hjust = 0)
+                        hjust = 1)
   }
   
   # Display the plot
