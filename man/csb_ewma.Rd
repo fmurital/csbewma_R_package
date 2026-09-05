@@ -13,7 +13,8 @@ csb_ewma(
   stop_at_signal = TRUE,
   distribution = NULL,
   posthoc_method = "BH",
-  alpha = 0.05
+  alpha = 0.05,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -41,6 +42,8 @@ then set to the first signal's result for convenience.}
 \item{posthoc_method}{Method for post-hoc identification (default = "BH")}
 
 \item{alpha}{Significance level for post-hoc (default = 0.05)}
+
+\item{verbose}{Logical. If TRUE, prints informational messages about whether the input data required dichotomization. Default FALSE (silent).}
 }
 \value{
 A list of class "csb_ewma" containing chart results and flagged

@@ -258,6 +258,7 @@ run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
 #' @param distribution If data is continuous, specify distribution
 #' @param posthoc_method Method for post-hoc identification (default = "BH")
 #' @param alpha Significance level for post-hoc (default = 0.05)
+#' @param verbose Logical. If TRUE, prints informational messages about whether the input data required dichotomization. Default FALSE (silent).
 #' @return A list of class "csb_ewma" containing chart results and flagged
 #'   streams. When \code{stop_at_signal = FALSE}, also contains
 #'   \code{signal_times} (every time point at which a signal was detected)
@@ -283,7 +284,7 @@ run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
 #' ---------------------------------------------------------------
 csb_ewma <- function(data, lambda, L, p0 = 0.5, max_time = NULL,
                      stop_at_signal = TRUE, distribution = NULL,
-                     posthoc_method = "BH", alpha = 0.05) {
+                     posthoc_method = "BH", alpha = 0.05, verbose = FALSE) {
 
   # ========================================================================
   # STEP 1: Input Validation
@@ -314,7 +315,7 @@ csb_ewma <- function(data, lambda, L, p0 = 0.5, max_time = NULL,
   if (is_binary) {
     # Data is already binary - use as-is
     bin_matrix <- as.matrix(data)
-    message("Data is already binary. Using as-is.\n")
+    if (verbose) message("Data is already binary; no dichotomization needed.\n")
   } else {
     # Data is continuous - need to dichotomize
     if (is.null(distribution)) {
@@ -326,7 +327,7 @@ csb_ewma <- function(data, lambda, L, p0 = 0.5, max_time = NULL,
     for (t in 1:ncol(data)) {
       bin_matrix[, t] <- dichotomize_data(data[, t], distribution, p0 = p0)
     }
-    message("Continuous data dichotomized using", distribution, "distribution\n")
+    if (verbose) message("Continuous data dichotomized using", distribution, "distribution\n")
   }
 
   # ========================================================================

@@ -36,6 +36,8 @@
   described in the dissertation, which presents only the
   stop-at-first-signal convention.
 
+* Added a `verbose` argument to `csb_ewma()` (default `FALSE`). When `TRUE`, prints informational messages about whether the input data required dichotomization; these are silent by default.
+
 ## Bug fixes
 
 * Fixed a label placement bug in `plot.csb_ewma()` and
