@@ -67,23 +67,25 @@ plot.csb_ewma <- function(x, title = "CSB-EWMA Control Chart",
   
   # Add signal point annotation if a signal was detected
   if (show_signal && x$signal_detected) {
-    
+
+    signal_times_to_plot <- if (!is.null(x$signal_times)) x$signal_times else x$signal_time
+
     signal_data <- data.frame(
-      t = x$signal_time,
-      r = x$r_history[x$signal_time]
+      t = signal_times_to_plot,
+      r = x$r_history[signal_times_to_plot]
     )
-    
+
     p <- p + ggplot2::geom_point(data = signal_data, ggplot2::aes(x = t, y = r),
-                                 color = "#D62828", size = 4.5, shape = 18) +
-      
+                                  color = "#D62828", size = 4.5, shape = 18) +
+
       ggplot2::annotate("text",
-                        x = x$signal_time,
-                        y = x$r_history[x$signal_time] + 0.15,
-                        label = paste("Signal at t =", x$signal_time),
-                        color = "#D62828",
-                        size = 3.5,
-                        fontface = "bold",
-                        hjust = 1)
+                         x = signal_times_to_plot,
+                         y = x$r_history[signal_times_to_plot] + 0.15,
+                         label = paste("Signal at t =", signal_times_to_plot),
+                         color = "#D62828",
+                         size = 3.5,
+                         fontface = "bold",
+                         hjust = 1)
   }
   
   # Display the plot
@@ -155,20 +157,22 @@ plot_csb_ewma_direct <- function(result, title = "CSB-EWMA Control Chart",
   
   # Add signal point if detected
   if (show_signal && result$signal_detected) {
-    
-    p <- p + ggplot2::geom_point(data = data.frame(t = result$signal_time,
-                                                   r = result$r_history[result$signal_time]),
-                                 ggplot2::aes(x = t, y = r),
-                                 color = "#D62828", size = 4.5, shape = 18) +
-      
+
+    signal_times_to_plot <- if (!is.null(result$signal_times)) result$signal_times else result$signal_time
+
+    p <- p + ggplot2::geom_point(data = data.frame(t = signal_times_to_plot,
+                                                     r = result$r_history[signal_times_to_plot]),
+                                  ggplot2::aes(x = t, y = r),
+                                  color = "#D62828", size = 4.5, shape = 18) +
+
       ggplot2::annotate("text",
-                        x = result$signal_time,
-                        y = result$r_history[result$signal_time] + 0.15,
-                        label = paste("Signal at t =", result$signal_time),
-                        color = "#D62828",
-                        size = 3.5,
-                        fontface = "bold",
-                        hjust = 1)
+                         x = signal_times_to_plot,
+                         y = result$r_history[signal_times_to_plot] + 0.15,
+                         label = paste("Signal at t =", signal_times_to_plot),
+                         color = "#D62828",
+                         size = 3.5,
+                         fontface = "bold",
+                         hjust = 1)
   }
   
   # Display the plot

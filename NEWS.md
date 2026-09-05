@@ -21,6 +21,20 @@
   the CSB-EWMA chart. This function is diagnostic only; it does not remove
   or adjust correlated streams, since no validated correction method for
   correlated streams currently exists for this chart.
+* Added a `stop_at_signal` argument to `run_csb_ewma()` and `csb_ewma()`.
+  The default (`stop_at_signal = TRUE`) is unchanged from every released
+  version through 1.1.0: monitoring stops at the first signal. Setting
+  `stop_at_signal = FALSE` instead continues monitoring through `max_time`,
+  recording every signal in `signal_times` without resetting the cumulative
+  sum or EWMA statistic after a signal. `csb_ewma()` performs post-hoc
+  identification separately at each signal in this mode, stored as a named
+  list in `flagged_by_signal` (`flagged` is kept as the first signal's
+  result for backward compatibility). `plot.csb_ewma()` and
+  `plot_csb_ewma_direct()` annotate every signal in `signal_times` when
+  present. This continuation mode is a practical convenience for
+  real-time or dashboard-style monitoring; it is not itself a procedure
+  described in the dissertation, which presents only the
+  stop-at-first-signal convention.
 
 ## Bug fixes
 

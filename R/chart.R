@@ -15,10 +15,22 @@
 #'     \item Update EWMA: r_t = lambda * W_t + (1 - lambda) * r_prev
 #'     \item Get exact variance from precomputed cache: v_t = var_cache[t]
 #'     \item Compute control limits: UCL_t = L * sqrt(v_t), LCL_t = -L * sqrt(v_t)
-#'     \item If r_t > UCL_t or r_t < LCL_t, signal at time t and break
-#'     \item Otherwise, update r_prev = r_t and continue
+#'     \item If r_t > UCL_t or r_t < LCL_t, a signal is recorded at time t
+#'     \item Update r_prev = r_t and continue, unless stop_at_signal ends monitoring here
 #'   }
 #' }
+#'
+#' By default (\code{stop_at_signal = TRUE}), monitoring stops at the first
+#' signal, matching the behavior of every released version of this function
+#' through 1.1.0. Setting \code{stop_at_signal = FALSE} instead continues
+#' monitoring through \code{max_time}, recording every time point at which a
+#' signal condition is met in \code{signal_times}, without resetting the
+#' cumulative sum or the EWMA statistic after a signal; the formula above is
+#' unchanged, only the decision to stop early changes. This continuation mode
+#' is a practical convenience for real-time or dashboard-style monitoring
+#' where the process keeps running after an alarm; it is not itself a
+#' procedure described in the dissertation, which presents only the
+#' stop-at-first-signal convention.
 #'
 #' @param bin_matrix A matrix of binary indicators (streams as rows, time as columns)
 #' @param lambda Smoothing parameter for EWMA (0 < lambda <= 1)
@@ -26,7 +38,14 @@
 #' @param var_cache Precomputed variance vector from precompute_variance()
 #' @param max_time Maximum time points to monitor (default = NULL uses all)
 #' @param p0 In-control proportion (default = 0.5)
-#' @return A list of class "csb_ewma" containing chart results
+#' @param stop_at_signal Logical. If TRUE (default), monitoring stops at the
+#'   first signal, reproducing the behavior of every version through 1.1.0.
+#'   If FALSE, monitoring continues through max_time and every signal time is
+#'   recorded in signal_times.
+#' @return A list of class "csb_ewma" containing chart results. Includes
+#'   signal_time and signal_detected (the first signal, kept for backward
+#'   compatibility) and signal_times (an integer vector of every time point
+#'   at which a signal was recorded; empty if none).
 #' @seealso [csb_ewma()] for the higher-level convenience wrapper that dichotomizes continuous data, precomputes variance, calls this function, and performs post-hoc identification automatically.
 #' @export
 #'
@@ -36,9 +55,14 @@
 #' var_cache <- precompute_variance(0.175, max_t = 200)
 #' result <- run_csb_ewma(bin_matrix, lambda = 0.175, L = 1.375, var_cache)
 #' print(paste("Signal at time:", result$signal_time))
+#'
+#' # Continue monitoring past the first signal
+#' result2 <- run_csb_ewma(bin_matrix, lambda = 0.175, L = 1.375, var_cache,
+#'                          stop_at_signal = FALSE)
+#' print(result2$signal_times)
 # ----------------------------------------------------------------------------
 run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
-                         max_time = NULL, p0 = 0.5) {
+                         max_time = NULL, p0 = 0.5, stop_at_signal = TRUE) {
 
   # ========================================================================
   # STEP 1: Input Validation
@@ -103,6 +127,7 @@ run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
   # Initialize signal tracking variables
   signal_time <- NA
   signal_detected <- FALSE
+  signal_times <- integer(0)
 
   # ========================================================================
   # STEP 3: Main Monitoring Loop
@@ -141,9 +166,14 @@ run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
 
     # Check for signal: r_t exceeds either control limit
     if (r_t > UCL_t || r_t < LCL_t) {
-      signal_time <- t
+      if (!signal_detected) {
+        signal_time <- t
+      }
       signal_detected <- TRUE
-      break
+      signal_times <- c(signal_times, t)
+      if (stop_at_signal) {
+        break
+      }
     }
 
     # Update previous EWMA value for next iteration
@@ -155,11 +185,18 @@ run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
   # ========================================================================
 
   # Determine signal time (if no signal, use max_time)
-  if (signal_detected) {
-    T_sig <- signal_time
+  if (stop_at_signal) {
+    if (signal_detected) {
+      T_sig <- signal_time
+    } else {
+      T_sig <- max_time
+      warning("No signal detected within max_time")
+    }
   } else {
     T_sig <- max_time
-    warning("No signal detected within max_time")
+    if (!signal_detected) {
+      warning("No signal detected within max_time")
+    }
   }
 
   # Truncate binary matrix to signal time
@@ -172,6 +209,8 @@ run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
   result_list <- list(
     signal_time = signal_time,
     signal_detected = signal_detected,
+    signal_times = signal_times,
+    stop_at_signal = stop_at_signal,
     T_sig = T_sig,
     r_history = r_history[1:T_sig],
     UCL_history = UCL_history[1:T_sig],
@@ -193,15 +232,37 @@ run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
 #'
 #' Runs the Cumulative Standardized Binomial EWMA control chart on multiple stream data.
 #'
+#' By default (\code{stop_at_signal = TRUE}), monitoring stops at the first
+#' signal and post-hoc identification is performed once, matching the
+#' behavior of every released version of this function through 1.1.0.
+#' Setting \code{stop_at_signal = FALSE} instead continues monitoring
+#' through \code{max_time} and performs post-hoc identification separately
+#' at every signal recorded in \code{signal_times}, using only the data
+#' observed up to and including that signal. See \code{\link{run_csb_ewma}}
+#' for the full explanation of continuation mode; it applies identically
+#' here since this function calls that one internally.
+#'
 #' @param data A matrix of binary indicators (0/1) with streams as rows and time as columns
 #' @param lambda Smoothing parameter for EWMA (0 < lambda <= 1)
 #' @param L Control limit multiplier
 #' @param p0 In-control proportion (default = 0.5)
 #' @param max_time Maximum time points to monitor (default = NULL uses all)
+#' @param stop_at_signal Logical. If TRUE (default), monitoring stops at the
+#'   first signal and post-hoc identification is performed once, stored in
+#'   \code{flagged} (backward compatible with every released version through
+#'   1.1.0). If FALSE, monitoring continues through \code{max_time} and
+#'   post-hoc identification is performed separately at each signal in
+#'   \code{signal_times}, stored as a named list in \code{flagged_by_signal}
+#'   (names are the signal times as character strings); \code{flagged} is
+#'   then set to the first signal's result for convenience.
 #' @param distribution If data is continuous, specify distribution
 #' @param posthoc_method Method for post-hoc identification (default = "BH")
 #' @param alpha Significance level for post-hoc (default = 0.05)
-#' @return A list of class "csb_ewma" containing chart results and flagged streams
+#' @return A list of class "csb_ewma" containing chart results and flagged
+#'   streams. When \code{stop_at_signal = FALSE}, also contains
+#'   \code{signal_times} (every time point at which a signal was detected)
+#'   and \code{flagged_by_signal} (post-hoc identification results at each
+#'   of those times).
 #' @seealso [run_csb_ewma()] for the lower-level engine this function calls, useful directly when a variance cache should be precomputed once and reused across many chart runs (for example, in simulation studies).
 #' @export
 #'
@@ -213,11 +274,16 @@ run_csb_ewma <- function(bin_matrix, lambda, L, var_cache,
 #' result <- csb_ewma(bin_data, lambda = 0.175, L = 1.375)
 #' print(result)
 #' plot(result)
+#'
+#' # Continue monitoring past the first signal and see every signal time
+#' result2 <- csb_ewma(bin_data, lambda = 0.175, L = 1.375,
+#'                      stop_at_signal = FALSE)
+#' print(result2$signal_times)
 #' }
-# ----------------------------------------------------------------------------
+#' ---------------------------------------------------------------
 csb_ewma <- function(data, lambda, L, p0 = 0.5, max_time = NULL,
-                     distribution = NULL, posthoc_method = "BH",
-                     alpha = 0.05) {
+                     stop_at_signal = TRUE, distribution = NULL,
+                     posthoc_method = "BH", alpha = 0.05) {
 
   # ========================================================================
   # STEP 1: Input Validation
@@ -282,36 +348,74 @@ csb_ewma <- function(data, lambda, L, p0 = 0.5, max_time = NULL,
   # ========================================================================
 
   chart_result <- run_csb_ewma(bin_matrix, lambda, L, var_cache,
-                               max_time = max_time, p0 = p0)
+                               max_time = max_time, p0 = p0,
+                               stop_at_signal = stop_at_signal)
 
   # ========================================================================
   # STEP 5: Perform post-hoc identification if signal detected
   # ========================================================================
 
   if (chart_result$signal_detected) {
-    message("Signal detected at time t =", chart_result$signal_time, "\n")
+    if (stop_at_signal) {
+      message("Signal detected at time t =", chart_result$signal_time, "\n")
 
-    # Identify out-of-control streams using specified method
-    flagged <- identify_ooc(chart_result$bin_matrix,
-                            alpha = alpha,
-                            method = posthoc_method,
-                            p0 = p0)
+      # Identify out-of-control streams using specified method
+      flagged <- identify_ooc(chart_result$bin_matrix,
+                               alpha = alpha,
+                               method = posthoc_method,
+                               p0 = p0)
 
-    # Add flagged results to the output
-    chart_result$flagged <- flagged
-    chart_result$posthoc_method <- posthoc_method
-    chart_result$alpha <- alpha
+      # Add flagged results to the output
+      chart_result$flagged <- flagged
+      chart_result$flagged_by_signal <- stats::setNames(
+        list(flagged), as.character(chart_result$signal_time)
+      )
+      chart_result$posthoc_method <- posthoc_method
+      chart_result$alpha <- alpha
 
-    # Print summary of flagged streams
-    flagged_summary <- flagged_streams_summary(flagged)
-    if (flagged_summary$total_flagged > 0) {
-      message("Flagged streams:", flagged_summary$flagged_streams, "\n")
+      # Print summary of flagged streams
+      flagged_summary <- flagged_streams_summary(flagged)
+      if (flagged_summary$total_flagged > 0) {
+        message("Flagged streams:", flagged_summary$flagged_streams, "\n")
+      } else {
+        message("No streams were flagged as out-of-control\n")
+      }
     } else {
-      message("No streams were flagged as out-of-control\n")
+      message("Signal(s) detected at time t =",
+              paste(chart_result$signal_times, collapse = ", "), "\n")
+
+      # Post-hoc identification is performed separately at each signal,
+      # using only the data observed up to and including that signal time.
+      # This is a practical extension of the single-signal identification
+      # above to continuation mode; it is not itself a procedure described
+      # in the dissertation.
+      flagged_by_signal <- lapply(chart_result$signal_times, function(t) {
+        identify_ooc(chart_result$bin_matrix[, 1:t, drop = FALSE],
+                     alpha = alpha,
+                     method = posthoc_method,
+                     p0 = p0)
+      })
+      names(flagged_by_signal) <- as.character(chart_result$signal_times)
+
+      chart_result$flagged_by_signal <- flagged_by_signal
+      chart_result$flagged <- flagged_by_signal[[1]]
+      chart_result$posthoc_method <- posthoc_method
+      chart_result$alpha <- alpha
+
+      for (t in chart_result$signal_times) {
+        flagged_summary <- flagged_streams_summary(flagged_by_signal[[as.character(t)]])
+        if (flagged_summary$total_flagged > 0) {
+          message("Signal at t =", t, ": flagged streams:",
+                  flagged_summary$flagged_streams, "\n")
+        } else {
+          message("Signal at t =", t, ": no streams were flagged as out-of-control\n")
+        }
+      }
     }
   } else {
     message("No signal detected within", max_time, "time points\n")
     chart_result$flagged <- NULL
+    chart_result$flagged_by_signal <- NULL
   }
 
   # ========================================================================
